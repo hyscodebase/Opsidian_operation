@@ -54,34 +54,42 @@ toggleButton.addEventListener("click", async () => {
 });
 
 syncNowButton.addEventListener("click", async () => {
-  const tabId = await getActiveChatTabId();
-  if (!tabId) {
-    setStatus("활성 탭이 ChatGPT가 아닙니다.");
-    return;
+  try {
+    const tabId = await getActiveChatTabId();
+    if (!tabId) {
+      setStatus("활성 탭이 ChatGPT가 아닙니다.");
+      return;
+    }
+
+    setStatus("수동 동기화 요청 중...");
+
+    const result = await chrome.tabs.sendMessage(tabId, { type: "opsidian/force-sync" });
+    if (!result?.ok) {
+      setStatus(`수동 동기화 실패: ${result?.error || "unknown"}`);
+      return;
+    }
+
+    await refresh();
+    setStatus(`${statusEl.textContent}\n(수동 동기화 완료)`);
+  } catch (error) {
+    setStatus(`수동 동기화 실패: ${String(error?.message || error)}`);
   }
-
-  setStatus("수동 동기화 요청 중...");
-
-  const result = await chrome.tabs.sendMessage(tabId, { type: "opsidian/force-sync" });
-  if (!result?.ok) {
-    setStatus(`수동 동기화 실패: ${result?.error || "unknown"}`);
-    return;
-  }
-
-  await refresh();
-  setStatus(`${statusEl.textContent}\n(수동 동기화 완료)`);
 });
 
 pingButton.addEventListener("click", async () => {
-  setStatus("Obsidian 연결 확인 중...");
-  const result = await chrome.runtime.sendMessage({ type: "opsidian/ping" });
+  try {
+    setStatus("Obsidian 연결 확인 중...");
+    const result = await chrome.runtime.sendMessage({ type: "opsidian/ping" });
 
-  if (result?.ok && result?.result?.ok) {
-    setStatus(`Obsidian 연결 성공 (status ${result.result.status})`);
-    return;
+    if (result?.ok && result?.result?.ok) {
+      setStatus(`Obsidian 연결 성공 (status ${result.result.status})`);
+      return;
+    }
+
+    setStatus(`Obsidian 연결 실패: ${result?.error || "status error"}`);
+  } catch (error) {
+    setStatus(`Obsidian 연결 실패: ${String(error?.message || error)}`);
   }
-
-  setStatus(`Obsidian 연결 실패: ${result?.error || "status error"}`);
 });
 
 openOptions.addEventListener("click", (e) => {

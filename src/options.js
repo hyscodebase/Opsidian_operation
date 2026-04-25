@@ -66,18 +66,22 @@ saveEl.addEventListener("click", async () => {
 });
 
 testConnectionEl.addEventListener("click", async () => {
-  const ok = await save();
-  if (!ok) return;
+  try {
+    const ok = await save();
+    if (!ok) return;
 
-  setMessage("연결 테스트 중...");
-  const result = await chrome.runtime.sendMessage({ type: "opsidian/ping" });
+    setMessage("연결 테스트 중...");
+    const result = await chrome.runtime.sendMessage({ type: "opsidian/ping" });
 
-  if (result?.ok && result?.result?.ok) {
-    setMessage(`연결 성공 (status ${result.result.status})`);
-    return;
+    if (result?.ok && result?.result?.ok) {
+      setMessage(`연결 성공 (status ${result.result.status})`);
+      return;
+    }
+
+    setMessage(`연결 실패: ${result?.error || "status error"}`, true);
+  } catch (error) {
+    setMessage(`연결 실패: ${String(error?.message || error)}`, true);
   }
-
-  setMessage(`연결 실패: ${result?.error || "status error"}`, true);
 });
 
 load();

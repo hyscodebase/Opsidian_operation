@@ -58,3 +58,9 @@ Obsidian에서 Local REST API 플러그인을 설치/활성화하고 API 키를 
 
 - ChatGPT 웹 UI 구조가 크게 바뀌면 메시지 추출 로직 업데이트가 필요할 수 있습니다.
 - 매우 긴 대화는 동기화 요청 크기가 커질 수 있습니다.
+
+
+## 개발/검증
+
+- 문법 체크: `node --check src/background.js` 등
+- 유틸 단위테스트: `node --test tests/shared.test.mjs`

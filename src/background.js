@@ -1,3 +1,10 @@
+import {
+  escapeYaml,
+  normalizePath,
+  sanitizeTitleForFilename,
+  stripMdExtension
+} from "./shared.mjs";
+
 const DEFAULTS = {
   enabled: false,
   folder: "ChatGPT",
@@ -13,7 +20,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   await chrome.storage.local.set({ ...DEFAULTS, ...current });
 });
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "opsidian/toggle") {
     sendResponse({ ok: true });
     return;
@@ -22,13 +29,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "opsidian/ping") {
     pingObsidian()
       .then((result) => sendResponse({ ok: true, result }))
-      .catch((error) => sendResponse({ ok: false, error: String(error?.message || error) }));
-    return true;
-  }
-
-  if (message?.type === "opsidian/manual-sync") {
-    requestForceSyncFromTab(sender)
-      .then(() => sendResponse({ ok: true }))
       .catch((error) => sendResponse({ ok: false, error: String(error?.message || error) }));
     return true;
   }
@@ -45,15 +45,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   return false;
 });
-
-async function requestForceSyncFromTab(sender) {
-  const tabId = sender?.tab?.id;
-  if (!tabId) {
-    throw new Error("활성 ChatGPT 탭에서만 수동 동기화가 가능합니다.");
-  }
-
-  await chrome.tabs.sendMessage(tabId, { type: "opsidian/force-sync" });
-}
 
 async function getSettings() {
   return chrome.storage.local.get([
@@ -94,18 +85,6 @@ function buildMarkdown(payload) {
   return lines.join("\n");
 }
 
-function escapeYaml(value) {
-  return JSON.stringify(String(value ?? ""));
-}
-
-function normalizePath(path) {
-  return path
-    .split("/")
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .join("/");
-}
-
 async function upsertConversation(payload) {
   const settings = await getSettings();
   if (!settings.enabled) return;
@@ -115,20 +94,16 @@ async function upsertConversation(payload) {
   }
 
   const day = payload.capturedAt.slice(0, 10);
-  const safeTitle = payload.title
-    .replace(/[\\/:*?"<>|]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 80);
+  const safeTitle = sanitizeTitleForFilename(payload.title, payload.conversationId);
 
   const baseFolder = normalizePath(settings.folder || "ChatGPT");
-  const filePath = normalizePath(`${baseFolder}/${day}-${safeTitle || payload.conversationId}.md`);
+  const filePath = normalizePath(`${baseFolder}/${day}-${safeTitle}.md`);
   const markdown = buildMarkdown(payload);
 
   await putMarkdown(settings, filePath, markdown);
 
   if (settings.updateIndex && settings.indexNotePath) {
-    const linkLine = `- [[${filePath.replace(/\.md$/i, "")}]]`;
+    const linkLine = `- [[${stripMdExtension(filePath)}]]`;
     await appendUniqueLine(settings, normalizePath(settings.indexNotePath), [
       "# ChatGPT Index",
       "",
@@ -138,7 +113,7 @@ async function upsertConversation(payload) {
 
   if (settings.appendDailyLinks && settings.dailyFolder) {
     const dailyPath = normalizePath(`${settings.dailyFolder}/${day}.md`);
-    const linkLine = `- [[${filePath.replace(/\.md$/i, "")}]]`;
+    const linkLine = `- [[${stripMdExtension(filePath)}]]`;
     await appendUniqueLine(settings, dailyPath, [`# ${day}`, "", linkLine], linkLine);
   }
 
@@ -219,7 +194,15 @@ async function fetchWithRetry(url, options, retries = 2) {
   let lastError;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
-      return await fetch(url, options);
+      const response = await fetch(url, options);
+      if (response.status === 429 || response.status >= 500) {
+        if (attempt < retries) {
+          await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+          continue;
+        }
+      }
+
+      return response;
     } catch (error) {
       lastError = error;
       if (attempt < retries) {
