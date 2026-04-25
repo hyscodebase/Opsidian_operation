@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Opsidian Conversation Sync",
+  "version": "0.2.0",
+  "description": "Capture ChatGPT conversations while ON and sync structured notes to Obsidian.",
+  "permissions": ["storage", "alarms", "tabs"],
+  "host_permissions": [
+    "https://chat.openai.com/*",
+    "https://chatgpt.com/*",
+    "http://127.0.0.1:27123/*",
+    "http://localhost:27123/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Opsidian",
+    "default_popup": "src/popup.html"
+  },
+  "options_page": "src/options.html",
+  "content_scripts": [
+    {
+      "matches": ["https://chat.openai.com/*", "https://chatgpt.com/*"],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
