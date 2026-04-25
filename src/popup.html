@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Opsidian</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        width: 320px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      .row { margin-bottom: 10px; }
+      button {
+        width: 100%;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      #toggle.on { background: #16a34a; color: #fff; }
+      #toggle.off { background: #334155; color: #e2e8f0; }
+      #syncNow { background: #2563eb; color: #fff; }
+      #ping { background: #1e293b; color: #cbd5e1; }
+      .small { font-size: 12px; color: #94a3b8; line-height: 1.4; }
+      .status {
+        font-size: 12px;
+        background: #111827;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 8px;
+        color: #cbd5e1;
+      }
+      a { color: #93c5fd; text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <button id="toggle" class="off">동기화 OFF</button>
+    </div>
+    <div class="row">
+      <button id="syncNow">지금 동기화</button>
+    </div>
+    <div class="row">
+      <button id="ping">Obsidian 연결 테스트</button>
+    </div>
+    <div class="row status" id="status">대기 중</div>
+    <div class="small">
+      API 키/경로는 <a id="openOptions" href="#">설정 페이지</a>에서 입력하세요.
+    </div>
+    <script type="module" src="./popup.js"></script>
+  </body>
+</html>
